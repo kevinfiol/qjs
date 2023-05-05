@@ -1,0 +1,49 @@
+import * as base from './base.js';
+
+export const template = ({ title }) => base.template({
+  title,
+  contents: `
+    <div class="controls p1">
+        <a href="https://github.com/kevinfiol/kevinfiol.com/new/master/content/blog">new</a>
+    </div>
+
+    <header>
+        <div style="width: 200px; height: 200px;">
+            <img
+              loading="lazy"
+              class="fade-in"
+              style="width: 100%; height: auto; fill: currentColor;"
+              src="/img/spes.png"
+              alt="astronaut sitting at a computer"
+            />
+        </div>
+        <h1 class="mb0" style="font-weight: 400">kevin f.</h1>
+        <nav>
+            <ul class="list-reset my1">
+                <li class="inline-block mr2"><a href="about">about</a></li>
+                <li class="inline-block mr2"><a href="https://github.com/kevinfiol">github</a></li>
+                <li class="inline-block mr2"><a href="/resume/">resume</a></li>
+            </ul>
+        </nav>
+        <p class="my1" style="font-size: 0.9em">contact: <a href="mailto:me@kevinfiol.com">me@kevinfiol.com</a></p>
+        <p class="mb1 mt0 light-subdue"><small><em>spaceman mascot by <a href="https://twitter.com/Haggle">twitter.com/haggle</a></em></small></p>
+    </header>
+
+    <div class="line" aria-hidden="true"></div>
+
+    <section>
+        {% set blog = get_section(path="blog/_index.md") %}
+        {% for post in blog.pages | slice(start=0, end=6) %}
+            <article class="archive-link">
+                <time datetime="{{ post.date | date(format="%Y-%m-%d", timezone="America/New_York") }}">{{ post.date | date(format="%Y.%m.%d", timezone="America/New_York") }}</time>
+                -
+                <header style="display: inline;"><a href="{{ post.permalink }}">{{ post.title }}</a></header>
+            </article>
+        {% endfor %}
+    </section>
+
+    <nav class="py1">
+        <a href="/archive/">archive →</a>
+    </nav>
+  `
+});

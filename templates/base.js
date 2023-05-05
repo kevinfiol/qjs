@@ -1,4 +1,4 @@
-export const template = ({ content, title }) => `
+export const template = ({ contents, title }) => `
   <!DOCTYPE html>
   <html lang="en">
       <head>
@@ -7,7 +7,7 @@ export const template = ({ content, title }) => `
           <meta http-equiv="X-UA-Compatible" content="ie=edge" />
           <meta name="description" content="kevin f.'s personal site" />
           <link rel="shortcut icon" href="/img/favicon.png" type="image/x-icon" />
-          <link rel="stylesheet" href="/css/main.css" />
+          <link rel="stylesheet" href="/static/main.css" />
 
           <title>
             ${title}
@@ -21,11 +21,11 @@ export const template = ({ content, title }) => `
           </div>
           <main class="main-content max-width-3 mx-auto">
               <div>
-                ${content}
+                ${contents}
               </div>
           </main>
 
-          <script src="/js/dark-mode-switch.min.js"></script>
+          <script src="/static/dark-mode-switch.min.js"></script>
       </body>
   </html>
 `;
