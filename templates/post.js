@@ -1,4 +1,4 @@
-import * as base from './base.js';
+import * as base from 'templates/base.js';
 
 export const template = ({ title, date, slug, contents }) => base.template({
   title,

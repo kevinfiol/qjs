@@ -1,4 +1,1 @@
-+++
-title = "kevin f."
-template = "index.js"
-+++
+title: "kevin f.", template: "index.js"

@@ -1,12 +1,13 @@
-import { loadFile, open, strerror } from 'std';
-import { readdir, realpath, mkdir, remove } from 'os';
-import { parse } from './lib/marked.js';
+import { loadFile, open, strerror, parseExtJSON } from 'std';
+import { readdir, realpath, mkdir, remove, O_TEXT } from 'os';
+import { parse } from 'lib/marked.js';
 
 const CONTENT_DIR = './content/';
 const TEMPLATE_DIR = './templates/';
 const DIST_DIR = './dist/';
 const PUBLIC_DIR = './public/';
 const TEMPLATES = {};
+const BLOG_DATA = [];
 
 // https://bellard.org/quickjs/quickjs.html
 
@@ -33,10 +34,11 @@ console.warn = () => {};
 })();
 
 async function processDir(contentDir, distDir) {
-  const mdFiles = readDirFiles(contentDir);
+  let mdFiles = readDirFiles(contentDir);
 
   for (const filename of mdFiles) {
     const [name, ext] = filename.split('.');
+    const slug = createSlug(name);
 
     if (ext !== 'md') {
       // not a markdown file; check if directory
@@ -47,14 +49,12 @@ async function processDir(contentDir, distDir) {
       mkdir(subDistDir);
 
       // traverse subdirectory for markdown files
-      processDir(subContentDir + '/', subDistDir);
+      await processDir(subContentDir + '/', subDistDir);
       continue;
     }
 
     const mdFilePath = getAbsPath(contentDir + filename);
-    const mdFileContents = loadFile(mdFilePath);
-
-    const [{ markdown, data }, dataError] = parseFrontMatter(mdFileContents);
+    const [{ markdown, data }, dataError] = parseContentFile(mdFilePath);
     if (dataError) throw dataError;
 
     const tplPath = getAbsPath(TEMPLATE_DIR + data.template);
@@ -65,7 +65,12 @@ async function processDir(contentDir, distDir) {
     if (!TEMPLATES[tplPath]) TEMPLATES[tplPath] = template;
 
     // inject snippet and metadata into template
-    const html = template({ ...data, contents: htmlSnippet, slug: createSlug(name) });
+    const html = template({
+      ...data,
+      contents: htmlSnippet,
+      slug,
+      blog: BLOG_DATA
+    });
 
     // determine paths for html files
     const distPath = getAbsPath(distDir);
@@ -102,11 +107,9 @@ function removeAll(path) {
     for (const file of files) {
       removeAll(path + '/' + file);
     }
-
-    remove(path);
-  } else {
-    remove(path);
   }
+
+  remove(path);
 }
 
 function copy(pathA, pathB) {
@@ -147,26 +150,30 @@ function normalize(path) {
   return path;
 }
 
-function parseFrontMatter(contents) {
-  let obj = { markdown: '', data: {} };
-  let error = undefined;
-  const match = contents.match(/^(\s*\+{3}\n)([\s\S]*?)(\+{3}\n)([\s\S]*)/);
+function parseContentFile(path) {
+  let data, error;
+  let markdown = '';
 
-  try {
-    if (!match) throw Error('no front matter detected');
-    const matter = match[2];
-    const markdown = match[4].trim();
+  const file = open(path, 'r');
+  while (!file.eof()) {
+    const line = file.getline();
 
-    const json = matter.replace(/(\w+)\s*=\s*(".*?"|\d+)/g, '"$1":$2');
-    const validJson = '{' + json.trim().split('\n').join(',') + '}';
+    if (!data) {
+      try {
+        // load first line as metadata
+        data = parseExtJSON('{' + line + '}');
+        continue;
+      } catch (e) {
+        e.message = path + ' ' + e.message;
+        error = e;
+        break;
+      }
+    }
 
-    obj.markdown = markdown;
-    obj.data = JSON.parse(validJson);
-  } catch (e) {
-    error = e;
+    markdown += line + '\n';
   }
 
-  return [obj, error];
+  return [{ markdown, data }, error];
 }
 
 function createSlug(text) {

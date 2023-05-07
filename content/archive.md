@@ -1,0 +1,1 @@
+title: 'archive', template: 'archive.js'

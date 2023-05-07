@@ -1,6 +1,12 @@
-import * as base from './base.js';
+import * as base from 'templates/base.js';
 
-export const template = ({ title }) => base.template({
+const forEach = (arr, fn) => {
+  let i, str = '';
+  for (i = 0; i < arr.length; i++) str += fn(arr[i]);
+  return str;
+};
+
+export const template = ({ title, blog }) => base.template({
   title,
   contents: `
     <div class="controls p1">
@@ -32,14 +38,13 @@ export const template = ({ title }) => base.template({
     <div class="line" aria-hidden="true"></div>
 
     <section>
-        {% set blog = get_section(path="blog/_index.md") %}
-        {% for post in blog.pages | slice(start=0, end=6) %}
+        ${forEach(blog, entry => `
             <article class="archive-link">
-                <time datetime="{{ post.date | date(format="%Y-%m-%d", timezone="America/New_York") }}">{{ post.date | date(format="%Y.%m.%d", timezone="America/New_York") }}</time>
+                <time datetime="${entry.date}">${entry.date.replaceAll('-', '.')}</time>
                 -
-                <header style="display: inline;"><a href="{{ post.permalink }}">{{ post.title }}</a></header>
+                <header style="display: inline;"><a href="/blog/${entry.slug}">${entry.title}</a></header>
             </article>
-        {% endfor %}
+        `)}
     </section>
 
     <nav class="py1">

@@ -1,7 +1,4 @@
-+++
-title = "about"
-template = "page.js"
-+++
+title: "about", template: "page.js"
 
 ![me standing by a river](/img/me.jpg)
 

@@ -1,8 +1,4 @@
-+++
-title = "A minimal RSS Feed Reader"
-date = "2021-10-12"
-template = "post.js"
-+++
+title: "A minimal RSS Feed Reader", date: "2021-10-12", template: "post.js"
 
 # A minimal RSS Feed Reader
 
