@@ -1,12 +1,16 @@
 import * as base from 'templates/base.js';
 
 const forEach = (arr, fn) => {
+  if (!Array.isArray(arr)) arr = Object.values(arr);
+  arr.sort((a, b) => new Date(b.date) - new Date(a.date));
+  arr = arr.slice(0, 6);
+
   let i, str = '';
-  for (i = 0; i < arr.length; i++) str += fn(arr[i]);
+  for (i = 0; i < arr.length; i++) str += fn(arr[i]) || '';
   return str;
 };
 
-export const template = ({ title, blog }) => base.template({
+export const template = ({ title, site }) => base.template({
   title,
   contents: `
     <div class="controls p1">
@@ -38,13 +42,15 @@ export const template = ({ title, blog }) => base.template({
     <div class="line" aria-hidden="true"></div>
 
     <section>
-        ${forEach(blog, entry => `
+        ${
+        forEach(site.blog, entry => `
             <article class="archive-link">
                 <time datetime="${entry.date}">${entry.date.replaceAll('-', '.')}</time>
                 -
                 <header style="display: inline;"><a href="/blog/${entry.slug}">${entry.title}</a></header>
             </article>
-        `)}
+        `)
+    }
     </section>
 
     <nav class="py1">

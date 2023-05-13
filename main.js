@@ -2,11 +2,10 @@ import { loadFile, open, strerror, parseExtJSON } from 'std';
 import { readdir, realpath, mkdir, remove, O_TEXT } from 'os';
 import { parse } from 'lib/marked.js';
 
-const CONTENT_DIR = './content/';
+const CONTENT_DIR = getAbsPath('./content/');
 const TEMPLATE_DIR = './templates/';
 const DIST_DIR = './dist/';
 const TEMPLATES = {};
-const BLOG_DATA = [];
 
 // https://bellard.org/quickjs/quickjs.html
 
@@ -16,21 +15,25 @@ console.warn = () => {};
 (async () => {
   try {
     // clean dir first
-    const contentFiles = readDirFiles(CONTENT_DIR);
-    for (const file of contentFiles) {
-      let [name, ext] = file.split('.');
-      if (name === 'index') name += '.html';
-      const [distFilePath, error] = realpath(DIST_DIR + name);
-      if (!error) removeAll(distFilePath); // remove from dist dir if it exists
-    }
+    // const contentFiles = readDirFiles(CONTENT_DIR);
+    // for (const file of contentFiles) {
+    //   let [name, ext] = file.split('.');
+    //   if (name === 'index') name += '.html';
+    //   const [distFilePath, error] = realpath(DIST_DIR + name);
+    //   if (!error) removeAll(distFilePath); // remove from dist dir if it exists
+    // }
 
-    await processDir(CONTENT_DIR, DIST_DIR);
+    const { queue, blogData } = await processDir(CONTENT_DIR, DIST_DIR, []);
+
+    for (const job of queue) {
+      job(blogData);
+    }
   } catch (e) {
     console.log(e);
   }
 })();
 
-async function processDir(contentDir, distDir) {
+async function processDir(contentDir, distDir, queue, blogData = {}) {
   let mdFiles = readDirFiles(contentDir);
 
   for (const filename of mdFiles) {
@@ -44,9 +47,10 @@ async function processDir(contentDir, distDir) {
 
       const subDistDir = getAbsPath(distDir) + '/' + filename;
       mkdir(subDistDir);
+      blogData[filename] = {};
 
       // traverse subdirectory for markdown files
-      await processDir(subContentDir + '/', subDistDir);
+      await processDir(subContentDir + '/', subDistDir, queue, blogData[filename]);
       continue;
     }
 
@@ -54,6 +58,7 @@ async function processDir(contentDir, distDir) {
     const [{ markdown, data }, dataError] = parseContentFile(mdFilePath);
     if (dataError) throw dataError;
 
+    blogData[slug] = { ...data, filename, slug, path: mdFilePath.split(CONTENT_DIR)[1].split('.md')[0] };
     const tplPath = getAbsPath(TEMPLATE_DIR + data.template);
     const htmlSnippet = parse(markdown);
 
@@ -61,26 +66,30 @@ async function processDir(contentDir, distDir) {
     const template = TEMPLATES[tplPath] ?? (await import(tplPath)).template;
     if (!TEMPLATES[tplPath]) TEMPLATES[tplPath] = template;
 
-    // inject snippet and metadata into template
-    const html = template({
-      ...data,
-      contents: htmlSnippet,
-      slug,
-      blog: BLOG_DATA
+    queue.push((blogData) => {
+      // inject snippet and metadata into template
+      const html = template({
+        ...data,
+        contents: htmlSnippet,
+        slug,
+        site: blogData
+      });
+
+      // determine paths for html files
+      const distPath = getAbsPath(distDir);
+      const htmlFilePath = name === 'index' ? 'index.html' : (name + '/index.html');
+
+      // make directory for non-index pages
+      if (name !== 'index') mkdir(distPath + '/' + name);
+
+      // write html
+      const file = open(distPath + '/' + htmlFilePath, 'w+');
+      file.puts(html);
+      file.close();
     });
-
-    // determine paths for html files
-    const distPath = getAbsPath(distDir);
-    const htmlFilePath = name === 'index' ? 'index.html' : (name + '/index.html');
-
-    // make directory for non-index pages
-    if (name !== 'index') mkdir(distPath + '/' + name);
-
-    // write html
-    const file = open(distPath + '/' + htmlFilePath, 'w+');
-    file.puts(html);
-    file.close();
   }
+
+  return { queue, blogData };
 }
 
 function getAbsPath(relativePath) {
