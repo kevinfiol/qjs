@@ -5,7 +5,6 @@ import { parse } from 'lib/marked.js';
 const CONTENT_DIR = './content/';
 const TEMPLATE_DIR = './templates/';
 const DIST_DIR = './dist/';
-const PUBLIC_DIR = './public/';
 const TEMPLATES = {};
 const BLOG_DATA = [];
 
@@ -16,15 +15,13 @@ console.warn = () => {};
 
 (async () => {
   try {
-    // create top level dist directory
-    mkdir(DIST_DIR);
-
-    // copy public files
-    const publicFiles = readDirFiles(PUBLIC_DIR);
-    for (const file of publicFiles) {
-      const [distFilePath, error] = realpath(DIST_DIR + file);
+    // clean dir first
+    const contentFiles = readDirFiles(CONTENT_DIR);
+    for (const file of contentFiles) {
+      let [name, ext] = file.split('.');
+      if (name === 'index') name += '.html';
+      const [distFilePath, error] = realpath(DIST_DIR + name);
       if (!error) removeAll(distFilePath); // remove from dist dir if it exists
-      copy(PUBLIC_DIR, DIST_DIR);
     }
 
     await processDir(CONTENT_DIR, DIST_DIR);
