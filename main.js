@@ -15,7 +15,7 @@ let HEADERS = [];
 
 marked.use({
   renderer: {
-    code (code, info) {
+    code(code, info) {
       let html = code;
       if (info) {
         try {
@@ -28,7 +28,7 @@ marked.use({
       return `<pre><code>${html}</code></pre>`;
     },
 
-    heading (text, level, raw) {
+    heading(text, level, raw) {
       const id = createSlug(raw);
       let html = `<h${level} id="${id}">`;
 
@@ -39,6 +39,10 @@ marked.use({
 
       html += `${text}</h${level}>`;
       return html;
+    },
+
+    image(href, _title, text) {
+      return `<div style="text-align: center; width: 100%;"><a href="${href}"><img loading="lazy" src="${href}" alt="${text}" /></a></div>`;
     }
   }
 });

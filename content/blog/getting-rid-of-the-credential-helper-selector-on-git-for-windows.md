@@ -4,7 +4,7 @@ title: "Getting rid of the Credential Helper Selector on Git for Windows", date:
 
 If you've ever been tormented by the following pop-up when trying to push or pull from an HTTPS Git origin:
 
-{{ img(src="/img/blog/credential_helper/helper.jpg", alt="Windows Credential Helper Selector") }}
+![Windows Credential Helper Selector](/img/blog/credential_helper/helper.jpg)
 
 There may be a way out of your misery. Initially I thought that if I added my Git credentials for the respective remote origin directly into my `.gitconfig` file, Git for Windows would stop prompting me every time I wanted to push or pull. Nope. And even more painful is that **for some unknown reason** the pop-up would appear *twice* no matter what -- even if I selected `Always use this from now on`.
 
