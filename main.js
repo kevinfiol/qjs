@@ -1,5 +1,5 @@
 import { loadFile, open, strerror, parseExtJSON } from 'std';
-import { readdir, realpath, mkdir, remove, O_TEXT } from 'os';
+import { readdir, realpath, mkdir, remove, getcwd } from 'os';
 import { marked } from 'lib/marked.js';
 import hljs from 'lib/highlight.js';
 
@@ -13,37 +13,37 @@ console.warn = () => {};
 
 let HEADERS = [];
 
-marked.use({
-  renderer: {
-    code(code, info) {
-      let html = code;
-      if (info) {
-        try {
-          html = hljs.highlight(code, { language: info }).value;
-        } catch (e) {
-          console.log('No language grammar available for: ', info);
-        }
+const renderer = (blog = false) => ({
+  code(code, info) {
+    let html = code;
+    if (info) {
+      try {
+        html = hljs.highlight(code, { language: info }).value;
+      } catch (e) {
+        console.log('No language grammar available for: ', info);
       }
-
-      return `<pre><code>${html}</code></pre>`;
-    },
-
-    heading(text, level, raw) {
-      const id = createSlug(raw);
-      let html = `<h${level} id="${id}">`;
-
-      if (level > 1) {
-        html += `<a aria-label="Anchor link for: ${id}" class="zola-anchor" href="#${id}">#</a>`;
-        HEADERS.push({ text, id });
-      }
-
-      html += `${text}</h${level}>`;
-      return html;
-    },
-
-    image(href, _title, text) {
-      return `<div style="text-align: center; width: 100%;"><a href="${href}"><img loading="lazy" src="${href}" alt="${text}" /></a></div>`;
     }
+
+    return `<pre><code>${html}</code></pre>`;
+  },
+
+  heading(text, level, raw) {
+    if (!blog) return false;
+    const id = createSlug(raw);
+    let html = `<h${level} id="${id}">`;
+
+    if (level > 1) {
+      html += `<a aria-label="Anchor link for: ${id}" class="zola-anchor" href="#${id}">#</a>`;
+      HEADERS.push({ text, id });
+    }
+
+    html += `${text}</h${level}>`;
+    return html;
+  },
+
+  image(href, _title, text) {
+    if (!blog) return false;
+    return `<div style="text-align: center; width: 100%;"><a href="${href}"><img loading="lazy" src="${href}" alt="${text}" /></a></div>`;
   }
 });
 
@@ -53,7 +53,7 @@ marked.use({
       const contentFiles = readDirFiles(CONTENT_DIR);
       for (const file of contentFiles) {
         let [name, ext] = file.split('.');
-        if (name === 'index') name += '.html';
+        if (['404', 'index'].includes(name)) name += '.html';
         const [distFilePath, error] = realpath(DIST_DIR + name);
         if (!error) removeAll(distFilePath); // remove from dist dir if it exists
       }
@@ -63,9 +63,12 @@ marked.use({
 
     const { queue, blogData } = await processDir(CONTENT_DIR, DIST_DIR, []);
 
+    const jobs = [];
     for (const job of queue) {
-      job(blogData);
+      jobs.push(job(blogData));
     }
+
+    await Promise.all(jobs);
   } catch (e) {
     console.log(e);
   }
@@ -80,10 +83,10 @@ async function processDir(contentDir, distDir, queue, blogData = {}) {
 
     if (ext !== 'md') {
       // not a markdown file; check if directory
-      const subContentDir = getAbsPath(contentDir + filename);
+      const subContentDir = getAbsPath(contentDir, filename);
       if (!isDirectory(subContentDir)) continue;
 
-      const subDistDir = getAbsPath(distDir) + '/' + filename;
+      const subDistDir = normalize(distDir, filename);
       mkdir(subDistDir);
       blogData[filename] = {};
 
@@ -92,12 +95,14 @@ async function processDir(contentDir, distDir, queue, blogData = {}) {
       continue;
     }
 
-    const mdFilePath = getAbsPath(contentDir + filename);
+    const mdFilePath = getAbsPath(contentDir, filename);
     const [{ markdown, data }, dataError] = parseContentFile(mdFilePath);
     if (dataError) throw dataError;
 
     blogData[slug] = { ...data, filename, slug, path: mdFilePath.split(CONTENT_DIR)[1].split('.md')[0] };
-    const tplPath = getAbsPath(TEMPLATE_DIR + data.template);
+    const tplPath = getAbsPath(TEMPLATE_DIR, data.template);
+
+    marked.use({ renderer: renderer(['post.js', 'page.js'].includes(data.template)) });
     const htmlSnippet = marked.parse(markdown);
 
     // get headers for table of contents
@@ -108,7 +113,7 @@ async function processDir(contentDir, distDir, queue, blogData = {}) {
     const template = TEMPLATES[tplPath] ?? (await import(tplPath)).template;
     if (!TEMPLATES[tplPath]) TEMPLATES[tplPath] = template;
 
-    queue.push((blogData) => {
+    queue.push(async (blogData) => {
       // inject snippet and metadata into template
       const html = template({
         ...data,
@@ -120,13 +125,13 @@ async function processDir(contentDir, distDir, queue, blogData = {}) {
 
       // determine paths for html files
       const distPath = getAbsPath(distDir);
-      const htmlFilePath = name === 'index' ? 'index.html' : (name + '/index.html');
+      const htmlFilePath = ['index', '404'].includes(name) ? `${name}.html` : (name + '/index.html');
 
       // make directory for non-index pages
-      if (name !== 'index') mkdir(distPath + '/' + name);
+      if (!['index', '404'].includes(name)) mkdir(normalize(distPath, name));
 
       // write html
-      const file = open(distPath + '/' + htmlFilePath, 'w+');
+      const file = open(normalize(distPath, htmlFilePath), 'w+');
       file.puts(html);
       file.close();
     });
@@ -135,9 +140,10 @@ async function processDir(contentDir, distDir, queue, blogData = {}) {
   return { queue, blogData };
 }
 
-function getAbsPath(relativePath) {
+function getAbsPath(...args) {
+  const relativePath = normalize(...args);
   const [path, error] = realpath(relativePath);
-  if (error) throw Error('Unable to get absolute path: ' + strerror(error));
+  if (error) throw Error('Unable to get absolute path: ' + strerror(error))
   return path;
 }
 
@@ -166,7 +172,23 @@ function isDirectory(path) {
   return !error;
 }
 
-function normalize(path) {
+function normalize(...args) {
+  const tokens = [];
+  let len = -1;
+
+  for (let arg of args) {
+    let last = tokens[len];
+
+    if (last && !['/', '\\'].includes(last[last.length - 1])) {
+      tokens[len] += '/';
+    }
+
+    len += 1;
+    tokens.push(arg);
+  }
+
+  let path = tokens.join('');
+
   if (path[path.length - 1] === '/') {
     path = path.slice(0, -1);
   }
@@ -194,7 +216,7 @@ function parseContentFile(path) {
       }
     }
 
-    markdown += line + '\n';
+    markdown += (line || '') + '\n';
   }
 
   return [{ markdown, data }, error];

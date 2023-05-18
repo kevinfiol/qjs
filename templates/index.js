@@ -30,9 +30,7 @@ export const template = ({ title, site }) => base.template({
         <h1 class="mb0" style="font-weight: 400">kevin f.</h1>
         <nav>
             <ul class="list-reset my1">
-                <li class="inline-block mr2"><a href="about">about</a></li>
-                <li class="inline-block mr2"><a href="https://github.com/kevinfiol">github</a></li>
-                <li class="inline-block mr2"><a href="/resume/">resume</a></li>
+                <li class="inline-block mr2"><a href="about">about</a></li><li class="inline-block mr2"><a href="https://github.com/kevinfiol">github</a></li><li class="inline-block mr2"><a href="/resume/">resume</a></li>
             </ul>
         </nav>
         <p class="my1" style="font-size: 0.9em">contact: <a href="mailto:me@kevinfiol.com">me@kevinfiol.com</a></p>
