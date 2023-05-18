@@ -8,9 +8,6 @@ const TEMPLATE_DIR = './templates/';
 const DIST_DIR = './dist/';
 const TEMPLATES = {};
 
-
-// https://bellard.org/quickjs/quickjs.html
-
 // monkey patch console.warn for marked.js
 console.warn = () => {};
 
@@ -48,14 +45,17 @@ marked.use({
 
 (async () => {
   try {
-    // clean dir first
-    // const contentFiles = readDirFiles(CONTENT_DIR);
-    // for (const file of contentFiles) {
-    //   let [name, ext] = file.split('.');
-    //   if (name === 'index') name += '.html';
-    //   const [distFilePath, error] = realpath(DIST_DIR + name);
-    //   if (!error) removeAll(distFilePath); // remove from dist dir if it exists
-    // }
+    if (scriptArgs.includes('clean')) {
+      const contentFiles = readDirFiles(CONTENT_DIR);
+      for (const file of contentFiles) {
+        let [name, ext] = file.split('.');
+        if (name === 'index') name += '.html';
+        const [distFilePath, error] = realpath(DIST_DIR + name);
+        if (!error) removeAll(distFilePath); // remove from dist dir if it exists
+      }
+
+      return;
+    }
 
     const { queue, blogData } = await processDir(CONTENT_DIR, DIST_DIR, []);
 
@@ -155,31 +155,6 @@ function removeAll(path) {
   }
 
   remove(path);
-}
-
-function copy(pathA, pathB) {
-  pathA = normalize(pathA);
-  pathB = normalize(pathB);
-
-  if (isDirectory(pathA)) {
-    mkdir(pathB);
-    const files = readDirFiles(pathA);
-
-    for (const file of files) {
-      copy(pathA + '/' + file, pathB + '/' + file);
-    }
-  } else {
-    const a = open(pathA, 'r'); // open a for reading
-    const b = open(pathB, 'w+'); // open b for writing
-
-    let byte;
-    while ((byte = a.getByte()) > -1) {
-      b.putByte(byte);
-    }
-
-    a.close();
-    b.close();
-  }
 }
 
 function isDirectory(path) {
