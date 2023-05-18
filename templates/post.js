@@ -1,6 +1,19 @@
 import * as base from 'templates/base.js';
 
-export const template = ({ title, date, slug, contents }) => base.template({
+const forEach = (arr, fn) => {
+  let i, str = '';
+  for (i = 0; i < arr.length; i++) str += fn(arr[i]) || '';
+  return str;
+};
+
+const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+const formatDate = (date) => {
+  const d = new Date(date);
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+};
+
+export const template = ({ title, date, slug, contents, tableOfContents }) => base.template({
   title,
   contents: `
     <div class="controls p1">
@@ -16,11 +29,21 @@ export const template = ({ title, date, slug, contents }) => base.template({
     </header>
 
     <small class="h5 p0 m0 light-subdue">
-        ${date}
+        ${formatDate(date)}
     </small>
 
-    <aside>
-    </aside>
+    ${tableOfContents.length > 0 ? `
+        <aside>
+            <div class="toc h5 py1">
+                <ul>
+                    ${forEach(tableOfContents, header => `
+                        <li><a title="${header.text}" href="#${header.id}">${header.text}</a></li>
+                    `)}
+                </ul>
+            </div>
+        </aside>
+    ` : ''
+    }
 
     <article class="page-content">
         ${ contents }

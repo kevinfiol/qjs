@@ -42,8 +42,7 @@ export const template = ({ title, site }) => base.template({
     <div class="line" aria-hidden="true"></div>
 
     <section>
-        ${
-        forEach(site.blog, entry => `
+        ${forEach(site.blog, entry => `
             <article class="archive-link">
                 <time datetime="${entry.date}">${entry.date.replaceAll('-', '.')}</time>
                 -

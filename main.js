@@ -1,16 +1,50 @@
 import { loadFile, open, strerror, parseExtJSON } from 'std';
 import { readdir, realpath, mkdir, remove, O_TEXT } from 'os';
-import { parse } from 'lib/marked.js';
+import { marked } from 'lib/marked.js';
+import hljs from 'lib/highlight.js';
 
 const CONTENT_DIR = getAbsPath('./content/');
 const TEMPLATE_DIR = './templates/';
 const DIST_DIR = './dist/';
 const TEMPLATES = {};
 
+
 // https://bellard.org/quickjs/quickjs.html
 
 // monkey patch console.warn for marked.js
 console.warn = () => {};
+
+let HEADERS = [];
+
+marked.use({
+  renderer: {
+    code (code, info) {
+      let html = code;
+      if (info) {
+        try {
+          html = hljs.highlight(code, { language: info }).value;
+        } catch (e) {
+          console.log('No language grammar available for: ', info);
+        }
+      }
+
+      return `<pre><code>${html}</code></pre>`;
+    },
+
+    heading (text, level, raw) {
+      const id = createSlug(raw);
+      let html = `<h${level} id="${id}">`;
+
+      if (level > 1) {
+        html += `<a aria-label="Anchor link for: ${id}" class="zola-anchor" href="#${id}">#</a>`;
+        HEADERS.push({ text, id });
+      }
+
+      html += `${text}</h${level}>`;
+      return html;
+    }
+  }
+});
 
 (async () => {
   try {
@@ -60,7 +94,11 @@ async function processDir(contentDir, distDir, queue, blogData = {}) {
 
     blogData[slug] = { ...data, filename, slug, path: mdFilePath.split(CONTENT_DIR)[1].split('.md')[0] };
     const tplPath = getAbsPath(TEMPLATE_DIR + data.template);
-    const htmlSnippet = parse(markdown);
+    const htmlSnippet = marked.parse(markdown);
+
+    // get headers for table of contents
+    const tableOfContents = [...HEADERS];
+    HEADERS = [];
 
     // load template; cache it if already loaded
     const template = TEMPLATES[tplPath] ?? (await import(tplPath)).template;
@@ -72,7 +110,8 @@ async function processDir(contentDir, distDir, queue, blogData = {}) {
         ...data,
         contents: htmlSnippet,
         slug,
-        site: blogData
+        site: blogData,
+        tableOfContents
       });
 
       // determine paths for html files
