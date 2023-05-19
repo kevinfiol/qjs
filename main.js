@@ -13,7 +13,7 @@ console.warn = () => {};
 
 let HEADERS = [];
 
-const renderer = (blog = false) => ({
+const renderer = (anchors = false) => ({
   code(code, info) {
     let html = code;
     if (info) {
@@ -28,11 +28,10 @@ const renderer = (blog = false) => ({
   },
 
   heading(text, level, raw) {
-    if (!blog) return false;
     const id = createSlug(raw);
     let html = `<h${level} id="${id}">`;
 
-    if (level > 1) {
+    if (level > 1 && anchors) {
       html += `<a aria-label="Anchor link for: ${id}" class="zola-anchor" href="#${id}">#</a>`;
       HEADERS.push({ text, id });
     }
@@ -42,7 +41,6 @@ const renderer = (blog = false) => ({
   },
 
   image(href, _title, text) {
-    if (!blog) return false;
     return `<div style="text-align: center; width: 100%;"><a href="${href}"><img loading="lazy" src="${href}" alt="${text}" /></a></div>`;
   }
 });
