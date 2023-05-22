@@ -1,7 +1,7 @@
 import { loadFile, open, strerror, parseExtJSON } from 'std';
 import { readdir, realpath, mkdir, remove, getcwd } from 'os';
 import { marked } from 'lib/marked.js';
-import hljs from 'lib/highlight.js';
+import prism from 'lib/prism.js';
 
 const CONTENT_DIR = getAbsPath('./content/');
 const TEMPLATE_DIR = './templates/';
@@ -18,7 +18,8 @@ const renderer = (anchors = false) => ({
     let html = code;
     if (info) {
       try {
-        html = hljs.highlight(code, { language: info }).value;
+        if (info === 'js') info = 'javascript';
+        html = prism.highlight(code, prism.languages[info], info);
       } catch (e) {
         console.log('No language grammar available for: ', info);
       }

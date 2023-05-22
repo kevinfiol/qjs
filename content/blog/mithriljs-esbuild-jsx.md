@@ -24,7 +24,7 @@ m.Fragment = { view: vnode => vnode.children };
 ```
 Then I just set `jsxFragment` to `m.Fragment` instead of `m.fragment` in my esbuild config and voilà! Fragments work as you'd expect.
 
-```js
+```jsx
 var JSX = {
     view: function() {
         return (
